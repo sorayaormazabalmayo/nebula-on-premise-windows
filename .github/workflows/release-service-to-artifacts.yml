@@ -273,7 +273,9 @@ jobs:
           fi
 
           echo "📦 Downloading from: $ASSET_URL"
-          wget -O "${REPO_NAME}.zip" "$ASSET_URL"
+          curl -L -H "Authorization: Bearer $GITHUB_TOKEN" -o "${REPO_NAME}.zip" "$ASSET_URL"
+          curl -I -L -H "Authorization: Bearer $GITHUB_TOKEN" "$ASSET_URL"
+
 
           echo "🔐 Computing SHA256 of ${REPO_NAME}.zip..."
           github_zip_sha256=$(sha256sum "${REPO_NAME}.zip" | awk '{ print $1 }')
@@ -285,8 +287,6 @@ jobs:
 
           echo "✅ SHA256: $github_zip_sha256"
           echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
-
-    
 
       # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
       - name: Verifying SHA256 Checksums
