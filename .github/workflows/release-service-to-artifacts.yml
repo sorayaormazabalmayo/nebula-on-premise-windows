@@ -260,19 +260,19 @@ jobs:
               exit 1
           fi
       
-          echo "Downloading ${{ github.repository }}.zip from: $ASSET_URL"
-          wget -O ${{ github.repository }}.zip "$ASSET_URL"
+          echo "Downloading ${{ env.service_name }}.zip from: $ASSET_URL"
+          wget -O ${{ env.service_name }}.zip "$ASSET_URL"
       
           # Compute SHA256 checksum of the ZIP file
-          echo "Computing SHA256 of ${{ github.repository }}.zip..."
-          github_zip_sha256=$(sha256sum "${{ github.repository }}.zip" | awk '{ print $1 }')
+          echo "Computing SHA256 of ${{ env.service_name }}.zip..."
+          github_zip_sha256=$(sha256sum "${{ env.service_name }}.zip" | awk '{ print $1 }')
       
           if [ -z "$github_zip_sha256" ]; then
-              echo "Error: Failed to compute SHA256 of ${{ github.repository }}.zip"
+              echo "Error: Failed to compute SHA256 of ${{ env.service_name }}.zip"
               exit 1
           fi
       
-          echo "GitHub Release ${{ github.repository }}.zip SHA256: $github_zip_sha256"
+          echo "GitHub Release ${{ env.service_name }}.zip SHA256: $github_zip_sha256"
           echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
 
       # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
