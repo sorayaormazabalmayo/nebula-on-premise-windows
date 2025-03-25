@@ -247,7 +247,7 @@ jobs:
 
 
           # Step 12: Getting the digest of the GitHub Release
-          name: Getting the digest of the GitHub Release
+          - name: Getting the digest of the GitHub Release
           id: getting-GitHub-Release-digest
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
