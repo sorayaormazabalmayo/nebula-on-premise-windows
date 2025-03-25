@@ -172,21 +172,60 @@ jobs:
             --version="${{ env.tag }}" \
             --source="${{ env.zip_name }}"
 
-      # Step 11: Download file from GAR to ./gar/ and compute SHA256
-      - name: Download and SHA256 from GAR
+      # Step 11: Getting the SHA of the uploaded file to GAR
+      - name: Getting the SHA of the uploaded file to GAR
+        id: getting-GAR-digest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p gar
+
+          # Create GAR directory
+          mkdir -p GAR
+          echo "Downloading artifact from Google Artifact Registry..."
+
+          # Download the artifact from Google Artifact Registry
           gcloud artifacts files download \
             --project=polished-medium-445107-i9 \
             --location=europe-southwest1 \
             --repository=nebula-storage \
-            --destination=./gar/ \
-            "${{ env.service_name }}:${{ env.tag }}:${{ env.zip_name }}"
+            --destination=./GAR/ \
+            "${{ env.service_name }}:${{ env.tag }}:${{ env.zip_name }}" \
+            --verbosity=debug
+
+          # Detect the actual downloaded filename
+          downloaded_file=$(ls -1 GAR/ | head -n 1)  # Get the first file in GAR/
           
-          filepath="gar/${{ env.zip_name }}"
-          sha256sum "$filepath" | tee gar.sha256
-          gar_digest=$(awk '{ print $1 }' gar.sha256)
-          echo "gar_sha256=$gar_digest" >> $GITHUB_ENV
+          if [ -z "$downloaded_file" ]; then
+              echo "Error: No file found in GAR/ after download."
+              exit 1
+          fi
+
+          # Fix potential encoding issue (%3A instead of ":")
+          decoded_file=$(echo "$downloaded_file" | sed 's/%3A/:/g')
+
+          # Rename the file if needed
+          if [[ "$downloaded_file" != "$decoded_file" ]]; then
+              mv "GAR/$downloaded_file" "GAR/$decoded_file"
+              downloaded_file="$decoded_file"
+          fi
+
+          # Ensure file is named correctly for SHA256 computation
+          final_zip_path="GAR/${{ env.zip_name }}"
+          mv "GAR/$downloaded_file" "$final_zip_path"
+
+          echo "Downloaded ZIP file from GAR: $final_zip_path"
+
+          # Compute SHA256 of the downloaded ZIP file
+          echo "Computing SHA256 of the downloaded ZIP..."
+          gar_downloaded_sha256=$(sha256sum "$final_zip_path" | awk '{ print $1 }')
+
+          if [ -z "$gar_downloaded_sha256" ]; then
+              echo "Error: Failed to compute SHA256 of the downloaded ZIP"
+              exit 1
+          fi
+
+          echo "GAR Downloaded ZIP SHA256: $gar_downloaded_sha256"
+          echo "gar_sha256=$gar_downloaded_sha256" >> $GITHUB_ENV
 
       # Step 12: Download file from GitHub to ./github/ and compute SHA256
       - name: Download and SHA256 from GitHub Release
