@@ -253,10 +253,10 @@ jobs:
           # Get the latest release asset URL for general-service.zip
           ASSET_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
-            | jq -r '.assets[] | select(.name == "${{ github.repository }}.zip") | .browser_download_url')
+            | jq -r '.assets[] | select(.name == "${{ env.service_name }}".zip") | .browser_download_url')
       
           if [ -z "$ASSET_URL" ]; then
-              echo "Error: ${{ github.repository }}.zip not found in the latest release!"
+              echo "Error: ${{ env.service_name }}.zip not found in the latest release!"
               exit 1
           fi
       
