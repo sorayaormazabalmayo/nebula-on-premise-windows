@@ -267,7 +267,6 @@ jobs:
         
             echo "📦 Downloading ${REPO_NAME}.zip from: $ASSET_URL"
             wget -O "${REPO_NAME}.zip" "$ASSET_URL"
-        
             echo "🔐 Computing SHA256 of ${REPO_NAME}.zip..."
             github_zip_sha256=$(sha256sum "${REPO_NAME}.zip" | awk '{ print $1 }')
         
