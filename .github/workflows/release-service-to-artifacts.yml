@@ -245,8 +245,7 @@ jobs:
           echo "GAR Downloaded ZIP SHA256: $gar_downloaded_sha256"
           echo "gar_sha256=$gar_downloaded_sha256" >> $GITHUB_ENV
 
-
-
+          
       # Step 12: Getting the digest of the GitHub Release
       - name: Getting the digest of the GitHub Release
         id: getting-GitHub-Release-digest
