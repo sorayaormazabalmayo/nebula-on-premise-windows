@@ -252,7 +252,7 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             REPO_NAME: ${{ env.repo_name }}  # pass as a standard env var
-          run: |
+        run: |
             echo "Looking for asset: ${REPO_NAME}.zip"
         
             # Get the latest release asset URL for the zip
