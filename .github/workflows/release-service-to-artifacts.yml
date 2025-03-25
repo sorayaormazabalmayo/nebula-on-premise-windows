@@ -281,7 +281,7 @@ jobs:
           echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
     
 
-      # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
+    # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
       - name: Verifying SHA256 Checksums
         id: verifying-digests
         env:
