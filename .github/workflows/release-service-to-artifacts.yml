@@ -5,7 +5,6 @@ on:
   push: 
     tags: 
       - '*' # Workflow is trigered when a push is made with a tag
-
 jobs:
   # Job 1: Check that the release version is correct
   well-tag-triggered-job:
