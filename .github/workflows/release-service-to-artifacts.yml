@@ -175,7 +175,6 @@ jobs:
         run: |
           echo "Uploading each built artifact to Google Artifact Registry..."
           echo "Uploading service name ${{ env.service_name }}"
-
           echo "Original version: ${{ env.tag }}"
 
           gcloud artifacts generic upload \
