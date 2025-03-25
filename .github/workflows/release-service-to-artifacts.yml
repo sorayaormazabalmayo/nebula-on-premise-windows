@@ -108,7 +108,6 @@ jobs:
           echo "repo_name=$repo_name" >> $GITHUB_ENV
 
       # Step 3: Getting the .zip that wants to be relased 
-      # zip -r nebula-on-premise-linux.zip general-service config/ static/ 
       - name: Getting the -zip 
         run: |
          zip -r nebula-on-premise-linux.zip bin/nebula-on-premise-linux config/
@@ -246,8 +245,6 @@ jobs:
           echo "GAR Downloaded ZIP SHA256: $gar_downloaded_sha256"
           echo "gar_sha256=$gar_downloaded_sha256" >> $GITHUB_ENV
 
-
-
       # Step 12: Getting the digest of the GitHub Release
       - name: Getting the digest of the GitHub Release
         id: getting-GitHub-Release-digest
@@ -280,7 +277,6 @@ jobs:
           echo "GitHub Release nebula-on-premise-linux.zip SHA256: $github_zip_sha256"
           echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
     
-
     # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
       - name: Verifying SHA256 Checksums
         id: verifying-digests
