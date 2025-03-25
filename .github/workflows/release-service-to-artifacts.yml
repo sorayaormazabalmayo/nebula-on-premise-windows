@@ -110,7 +110,7 @@ jobs:
       - name: Prepare ZIP file for release
         run: |
           mkdir -p release
-          zip -r "release/${{ env.repo_name }}.zip" bin/${{ env.repo_name }} config/
+          zip -r "${{ env.repo_name }}.zip" bin/${{ env.repo_name }} config/
           echo "zip_name=${{ env.repo_name }}.zip" >> $GITHUB_ENV
 
       # Step 4: Compute and save SHA256 of original ZIP (before any upload)
