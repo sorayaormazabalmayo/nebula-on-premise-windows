@@ -259,6 +259,13 @@ jobs:
             ASSET_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
               | jq -r --arg ZIP_NAME "${REPO_NAME}.zip" '.assets[] | select(.name == $ZIP_NAME) | .browser_download_url')
+
+            echo "🔍 Listing assets in latest release:"
+            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+                | jq -r '.assets[].name'
+
         
             if [ -z "$ASSET_URL" ]; then
                 echo "❌ Error: ${REPO_NAME}.zip not found in the latest release!"
