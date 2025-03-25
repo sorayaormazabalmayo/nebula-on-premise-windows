@@ -142,6 +142,20 @@ jobs:
           asset_path: release/${{ env.zip_name }}
           asset_name: ${{ env.zip_name }}
           asset_content_type: application/zip
+      # Step 8: Authenticate with Google Cloud (using Workload Identity Federation)
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: projects/185640679849/locations/global/workloadIdentityPools/github/providers/github-prov
+          service_account: github-actions-auth@polished-medium-445107-i9.iam.gserviceaccount.com
+          access_token_lifetime: '600s'
+      # 🔐 Step 9: Configure gcloud CLI with the authenticated service account
+      - name: Configure gcloud to use authenticated identity
+        run: |
+          gcloud config set account $GOOGLE_SERVICE_ACCOUNT
+        env:
+          GOOGLE_SERVICE_ACCOUNT: github-actions-auth@polished-medium-445107-i9.iam.gserviceaccount.com
 
       # Step 10: Upload artifact to Google Artifact Registry
       - name: Upload artifact to Google Artifact Registry
