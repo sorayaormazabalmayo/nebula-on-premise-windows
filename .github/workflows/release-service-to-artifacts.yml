@@ -193,13 +193,11 @@ jobs:
         id: getting-GAR-digest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SERVICE_NAME: ${{ env.service_name }}
-          ZIP_NAME: ${{ env.zip_name }}
-          TAG: ${{ env.tag }}
         run: |
+
           # Create GAR directory
           mkdir -p GAR
-          echo "📦 Downloading artifact from Google Artifact Registry..."
+          echo "Downloading artifact from Google Artifact Registry..."
 
           # Download the artifact from Google Artifact Registry
           gcloud artifacts files download \
@@ -207,18 +205,18 @@ jobs:
             --location=europe-southwest1 \
             --repository=nebula-storage \
             --destination=./GAR/ \
-            "${SERVICE_NAME}:${TAG}:${ZIP_NAME}" \
+            "${{ env.service_name }}:${{ env.tag }}:${{ env.zip_name }}" \
             --verbosity=debug
 
           # Detect the actual downloaded filename
-          downloaded_file=$(ls -1 GAR/ | head -n 1)
-
+          downloaded_file=$(ls -1 GAR/ | head -n 1)  # Get the first file in GAR/
+          
           if [ -z "$downloaded_file" ]; then
-              echo "❌ Error: No file found in GAR/ after download."
+              echo "Error: No file found in GAR/ after download."
               exit 1
           fi
 
-          # Decode if filename is URL-encoded (e.g., contains %3A)
+          # Fix potential encoding issue (%3A instead of ":")
           decoded_file=$(echo "$downloaded_file" | sed 's/%3A/:/g')
 
           # Rename the file if needed
@@ -227,66 +225,54 @@ jobs:
               downloaded_file="$decoded_file"
           fi
 
-          # Ensure consistent filename for SHA calculation
-          final_zip_path="GAR/${ZIP_NAME}"
+          # Ensure file is named correctly for SHA256 computation
+          final_zip_path="GAR/${{ env.zip_name }}"
           mv "GAR/$downloaded_file" "$final_zip_path"
 
-          echo "✅ Downloaded ZIP file from GAR: $final_zip_path"
+          echo "Downloaded ZIP file from GAR: $final_zip_path"
 
           # Compute SHA256 of the downloaded ZIP file
-          echo "🔐 Computing SHA256..."
+          echo "Computing SHA256 of the downloaded ZIP..."
           gar_downloaded_sha256=$(sha256sum "$final_zip_path" | awk '{ print $1 }')
 
           if [ -z "$gar_downloaded_sha256" ]; then
-              echo "❌ Error: Failed to compute SHA256 of the downloaded ZIP"
+              echo "Error: Failed to compute SHA256 of the downloaded ZIP"
               exit 1
           fi
 
-          echo "🔑 GAR Downloaded ZIP SHA256: $gar_downloaded_sha256"
+          echo "GAR Downloaded ZIP SHA256: $gar_downloaded_sha256"
           echo "gar_sha256=$gar_downloaded_sha256" >> $GITHUB_ENV
 
-
-      # Step 12: Getting the digest of the GitHub Release
-      - name: Get SHA256 of GitHub Release Asset
-        id: get-github-release-sha
+        # Step 12: Getting the digest of the GitHub Release
+      - name: Getting the digest of the GitHub Release
+        id: getting-GitHub-Release-digest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_NAME: ${{ env.repo_name }}
-          TAG: ${{ env.tag }}
         run: |
-          echo "🔍 Looking for asset '${REPO_NAME}.zip' in release tag '${TAG}'..."
-
-          # Create GR folder
-          mkdir -p GR
-
-          # Fetch the release info for the specific tag
-          release_info=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG}")
-
-          # Extract the download URL for the .zip asset
-          ASSET_URL=$(echo "$release_info" | jq -r --arg ZIP_NAME "${REPO_NAME}.zip" \
-            '.assets[] | select(.name == $ZIP_NAME) | .browser_download_url')
-
-          if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" == "null" ]; then
-            echo "❌ Error: '${REPO_NAME}.zip' not found in release tag '${TAG}'."
-            echo "Available assets:"
-            echo "$release_info" | jq -r '.assets[].name'
-            exit 1
-          fi
-
-          echo "📦 Downloading from: $ASSET_URL"
-          curl -L -H "Authorization: Bearer $GITHUB_TOKEN" -o "GR/${REPO_NAME}.zip" "$ASSET_URL"
-
-          echo "🔐 Computing SHA256 of GR/${REPO_NAME}.zip..."
-          github_zip_sha256=$(sha256sum "GR/${REPO_NAME}.zip" | awk '{ print $1 }')
-
-          if [ -z "$github_zip_sha256" ]; then
-              echo "❌ Error: Failed to compute SHA256."
+      
+          # Get the latest release asset URL for general-service.zip
+          ASSET_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+            | jq -r '.assets[] | select(.name == "${{ github.repository }}.zip") | .browser_download_url')
+      
+          if [ -z "$ASSET_URL" ]; then
+              echo "Error: ${{ github.repository }}.zip not found in the latest release!"
               exit 1
           fi
-
-          echo "✅ SHA256: $github_zip_sha256"
+      
+          echo "Downloading ${{ github.repository }}.zip from: $ASSET_URL"
+          wget -O ${{ github.repository }}.zip "$ASSET_URL"
+      
+          # Compute SHA256 checksum of the ZIP file
+          echo "Computing SHA256 of ${{ github.repository }}.zip..."
+          github_zip_sha256=$(sha256sum "${{ github.repository }}.zip" | awk '{ print $1 }')
+      
+          if [ -z "$github_zip_sha256" ]; then
+              echo "Error: Failed to compute SHA256 of ${{ github.repository }}.zip"
+              exit 1
+          fi
+      
+          echo "GitHub Release ${{ github.repository }}.zip SHA256: $github_zip_sha256"
           echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
 
       # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
