@@ -245,38 +245,38 @@ jobs:
           echo "GAR Downloaded ZIP SHA256: $gar_downloaded_sha256"
           echo "gar_sha256=$gar_downloaded_sha256" >> $GITHUB_ENV
 
-          
-      # Step 12: Getting the digest of the GitHub Release
-      - name: Getting the digest of the GitHub Release
-        id: getting-GitHub-Release-digest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-      
-          # Get the latest release asset URL for repo.zip
-          ASSET_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
-            | jq -r '.assets[] | select(.name == "${{env.repo_name}}.zip") | .browser_download_url')
-      
-          if [ -z "$ASSET_URL" ]; then
-              echo "Error: ${{env.repo_name}}.zip not found in the latest release!"
-              exit 1
-          fi
-      
-          echo "Downloading ${{env.repo_name}}.zip from: $ASSET_URL"
-          wget -O ${{env.repo_name}}.zip "$ASSET_URL"
-      
-          # Compute SHA256 checksum of the ZIP file
-          echo "Computing SHA256 of ${{env.repo_name}}.zip..."
-          github_zip_sha256=$(sha256sum "${{env.repo_name}}.zip" | awk '{ print $1 }')
-      
-          if [ -z "$github_zip_sha256" ]; then
-              echo "Error: Failed to compute SHA256 of ${{env.repo_name}}.zip"
-              exit 1
-          fi
-      
-          echo "GitHub Release ${{env.repo_name}}.zip SHA256: $github_zip_sha256"
-          echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
+          # Step 12: Getting the digest of the GitHub Release
+          name: Getting the digest of the GitHub Release
+          id: getting-GitHub-Release-digest
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            REPO_NAME: ${{ env.repo_name }}  # pass as a standard env var
+          run: |
+            echo "Looking for asset: ${REPO_NAME}.zip"
+        
+            # Get the latest release asset URL for the zip
+            ASSET_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+              | jq -r --arg ZIP_NAME "${REPO_NAME}.zip" '.assets[] | select(.name == $ZIP_NAME) | .browser_download_url')
+        
+            if [ -z "$ASSET_URL" ]; then
+                echo "❌ Error: ${REPO_NAME}.zip not found in the latest release!"
+                exit 1
+            fi
+        
+            echo "📦 Downloading ${REPO_NAME}.zip from: $ASSET_URL"
+            wget -O "${REPO_NAME}.zip" "$ASSET_URL"
+        
+            echo "🔐 Computing SHA256 of ${REPO_NAME}.zip..."
+            github_zip_sha256=$(sha256sum "${REPO_NAME}.zip" | awk '{ print $1 }')
+        
+            if [ -z "$github_zip_sha256" ]; then
+                echo "❌ Error: Failed to compute SHA256 of ${REPO_NAME}.zip"
+                exit 1
+            fi
+        
+            echo "✅ GitHub Release ${REPO_NAME}.zip SHA256: $github_zip_sha256"
+            echo "github_release_sha256=$github_zip_sha256" >> $GITHUB_ENV
     
 
       # Step 13: Verifying the SHA256 checksum of GAR vs. GitHub Release
