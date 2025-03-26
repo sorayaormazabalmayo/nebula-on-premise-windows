@@ -228,7 +228,7 @@ func main() {
 				// unziping and setting the update status to 0
 				unzipAndSetStatus(serviceVersion, generalLog)
 
-				targetFileService := filepath.Join(SALTOLocation, serviceVersion, service)
+				targetFileService := filepath.Join(SALTOLocation, serviceVersion, "bin", service)
 				targetFileConfig := filepath.Join(SALTOLocation, serviceVersion, "config", "general-service.yml")
 
 				// 1) Updating symlink
