@@ -249,7 +249,7 @@ func main() {
 
 				// 2) Reload and restart the service
 				ctx := context.Background()
-				if err := reloadAndRestartUnit(ctx, "general-service.service"); err != nil {
+				if err := reloadAndRestartUnit(ctx, "nebula-on-premise-linux.service"); err != nil {
 					generalLog.Printf("Error restarting service:", err)
 					return
 				}
