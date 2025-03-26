@@ -229,7 +229,7 @@ func main() {
 				unzipAndSetStatus(serviceVersion, generalLog)
 
 				targetFileService := filepath.Join(SALTOLocation, serviceVersion, "bin", service)
-				targetFileConfig := filepath.Join(SALTOLocation, serviceVersion, "config", "general-service.yml")
+				targetFileConfig := filepath.Join(SALTOLocation, serviceVersion, "config", "nebula-on-premise-linux.yml")
 
 				// 1) Updating symlink
 
