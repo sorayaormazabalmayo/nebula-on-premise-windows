@@ -7,25 +7,21 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/saltosystems-internal/x/log"
-	pkgserver "github.com/saltosystems-internal/x/server"
 )
+
+// -- EMBEDDED STATIC FILES -- //
 
 //go:embed static/index.html
 //go:embed static/actualizaciones.html
 //go:embed static/images/*
 var staticFiles embed.FS
 
-type Server struct {
-	s      *pkgserver.GroupServer
-	logger log.Logger
-	cancel context.CancelFunc
-}
+// -- UPDATE STATUS STATE -- //
 
 type UpdateStatus struct {
 	UpdateAvailable int `json:"update_available"`
@@ -33,87 +29,29 @@ type UpdateStatus struct {
 }
 
 var (
-	jsonFilePath = "/home/sormazabal/src/SALTO-client-linux/update_status.json"
+	jsonFilePath = "C:\\nebula-on-premise-windows\\update_status.json"
 	updateStatus UpdateStatus
 	updateMutex  sync.Mutex
 )
 
-// readUpdateStatus examinates that update_status.json exists and that can be poperly parsed
-func readUpdateStatus() {
+// readUpdateStatus loads or defaults the update status from a JSON file.
+func readUpdateStatus(logger *log.Logger) {
 	updateMutex.Lock()
 	defer updateMutex.Unlock()
 
 	file, err := os.ReadFile(jsonFilePath)
 	if err != nil {
-		fmt.Println("⚠️ Could not read update status file, using default (0)")
+		logger.Printf("⚠️ Could not read update status file, using default (0). Error %s:", err)
 		return
 	}
 
 	err = json.Unmarshal(file, &updateStatus)
 	if err != nil {
-		fmt.Println("⚠️ Could not parse update status JSON, using default (0)")
+		logger.Printf("⚠️ Could not parse update status JSON, using default (0). Error:%s", err)
 	}
 }
 
-// checkUpdateHandler is an HTTP hanfler function in GO that responds to an HTTP request with JSON data
-func checkUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(updateStatus)
-}
-
-// runUpdaterHandler is an HTTP handler that initiated an update process when it retrieves a POST request
-func runUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	fmt.Println("⚙️ Running update process...")
-	setUpdateRequestedStatus(1)
-
-	// handleShutdown waits for a termination signal and shuts down the server
-	// syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	// Restart the application (or notify an external service manager)
-}
-
-func periodicUpdateCheck(ctx context.Context) {
-
-	// A ticker is used to perform a specific action at a specific interval
-	// It repeatedly sends a signal on a channel ticker.C
-	ticker := time.NewTicker(1 * time.Second)
-
-	// This ensures that the ticker stops when the function exists, preventing memory leacks
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			readUpdateStatus()
-			if updateStatus.UpdateAvailable == 1 {
-				fmt.Println("🔄 Update available! Notifying frontend.")
-			}
-		case <-ctx.Done():
-			fmt.Println("🛑 Stopping periodic update check...")
-			return
-		}
-	}
-}
-
-// corsMiddleware enables CORS (Cross-origin Resource Sharing) for an HTTP server.
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// Setting "update_requested" to a value
+// setUpdateRequestedStatus updates the requested status in-memory and on disk.
 func setUpdateRequestedStatus(value int) error {
 	updateMutex.Lock()
 	defer updateMutex.Unlock()
@@ -123,29 +61,93 @@ func setUpdateRequestedStatus(value int) error {
 	if err != nil {
 		return err
 	}
-
 	return os.WriteFile(jsonFilePath, file, 0644)
 }
 
-// NewServer brings up the server
-func NewServer(cfg *Config, logger log.Logger) (*Server, error) {
-	var (
-		servers        []pkgserver.Server
-		httpServerOpts []pkgserver.HTTPServerOption
-	)
+// -- HTTP HANDLERS -- //
 
-	if cfg.HTTPAddr == "" {
-		return nil, errors.New("invalid config: HTTPAddr missing")
+func checkUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(updateStatus)
+}
+
+func runUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
 	}
-	// The mux variable in this code is an HTTP request multiplexer created using http.NewServeMux().
-	// It is responsible for routing incoming HTTP requests to the correct handler functions based on the request URL.
+
+	fmt.Println("⚙️ Running update process...")
+	if err := setUpdateRequestedStatus(1); err != nil {
+		fmt.Printf("⚠️ Error setting update requested status: %s", err)
+		http.Error(w, "Failed to set update requested status", http.StatusInternalServerError)
+		return
+	}
+
+	// Here you might signal a process manager or otherwise trigger an update...
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Update requested\n"))
+}
+
+// corsMiddleware enables Cross-Origin Resource Sharing.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// periodicUpdateCheck runs in a goroutine, periodically re-reads the update file.
+func periodicUpdateCheck(ctx context.Context, logger *log.Logger) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			readUpdateStatus(logger)
+			if updateStatus.UpdateAvailable == 1 {
+				logger.Printf("🔄 Update available! Notifying frontend.")
+				// Possibly push a websocket event or set a specific status, etc.
+			}
+		case <-ctx.Done():
+			logger.Printf("🛑 Stopping periodic update check...")
+			return
+		}
+	}
+}
+
+// Server wraps an http.Server and additional fields to manage the lifecycle.
+type Server struct {
+	httpServer *http.Server
+	cancel     context.CancelFunc
+}
+
+// NewServer creates and configures the HTTP server, starts background tasks.
+func NewServer(cfg *Config, logger *log.Logger) (*Server, error) {
+	if cfg.HTTPAddr == "" {
+		return nil, errors.New("invalid config: HTTPAddr is required")
+	}
+
+	// Set up mux and static files
 	mux := http.NewServeMux()
+
+	// Serve embedded static files under /static
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sub static files: %w", err)
 	}
-
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
+	// Example route serving an embedded file
 	mux.HandleFunc("/nebula", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		data, err := staticFiles.ReadFile("static/index.html")
@@ -156,42 +158,54 @@ func NewServer(cfg *Config, logger log.Logger) (*Server, error) {
 		w.Write(data)
 	})
 
+	// Update-related routes
 	mux.HandleFunc("/check-update", checkUpdateHandler)
 	mux.HandleFunc("/run-update", runUpdateHandler)
 
-	wrappedMux := corsMiddleware(mux)
+	// Wrap mux with CORS
+	handler := corsMiddleware(mux)
+
+	// Create a context we can cancel to stop our background goroutines
 	ctx, cancel := context.WithCancel(context.Background())
-	go periodicUpdateCheck(ctx)
+	go periodicUpdateCheck(ctx, logger)
 
-	httpServerOpts = append(httpServerOpts, pkgserver.WithRoutes(
-		&pkgserver.Route{Pattern: "/", Handler: wrappedMux},
-	))
-	httpServer, err := pkgserver.NewHTTPServer(cfg.HTTPAddr, httpServerOpts...)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	servers = append(servers, httpServer)
-
-	s, err := pkgserver.NewGroupServer(context.Background(), pkgserver.WithServers(servers))
-	if err != nil {
-		cancel()
-		return nil, err
+	// Prepare the standard library http.Server
+	server := &http.Server{
+		Addr:    cfg.HTTPAddr,
+		Handler: handler,
 	}
 
-	return &Server{s: s, logger: logger, cancel: cancel}, nil
+	return &Server{
+		httpServer: server,
+		cancel:     cancel,
+	}, nil
 }
 
-// It runs the server
-func (s *Server) Run() error {
-	fmt.Println("🚀 Server started...")
-	return s.s.Run(context.Background())
+// Run starts the server (blocking call).
+func (s *Server) Run(logger *log.Logger) error {
+	logger.Printf("🚀 Server started on %s", s.httpServer.Addr)
+	// Start serving; this blocks until the server fails or is shut down
+	err := s.httpServer.ListenAndServe()
+	if err == http.ErrServerClosed {
+		// This usually means we've called Shutdown
+		return nil
+	}
+	return err
 }
 
-// Shutdown shutdowns the server
-func (s *Server) Shutdown() {
-	fmt.Println("🛑 Shutting down server...")
+// Shutdown gracefully stops the server, cancels background work.
+func (s *Server) Shutdown(logger *log.Logger) {
+	logger.Printf("🛑 Shutting down server...")
+	// Stop the periodic checker
 	s.cancel()
-	time.Sleep(1 * time.Second)
-	fmt.Println("✅ Server stopped.")
+
+	// Graceful shutdown with a context timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.httpServer.Shutdown(ctx); err != nil {
+		logger.Printf("Error during shutdown: %s", err)
+	} else {
+		logger.Printf("✅ Server stopped.")
+	}
 }

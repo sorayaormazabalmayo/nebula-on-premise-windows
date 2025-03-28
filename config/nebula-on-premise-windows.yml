@@ -1,0 +1,6 @@
+# Server parameters
+http-addr: :8014
+internal-http-addr: :9004
+# Testing and debugging 
+debug: false
+

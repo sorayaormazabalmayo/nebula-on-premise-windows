@@ -36,8 +36,8 @@ const (
 )
 
 var (
-	serviceAccountKeyPath = "/home/sormazabal/artifact-downloader-key.json"
-	jsonFilePath          = "/home/sormazabal/src/SALTO-client-linux/update_status.json"
+	serviceAccountKeyPath = "C:\\nebula-on-premise-windows\\artifact-downloader-key.json"
+	jsonFilePath          = "C:\\nebula-on-premise-windows\\update_status.json"
 	service               = "nebula-on-premise-linux"
 	targetIndexFile       = "/home/sormazabal/src/SALTO-client-linux/data/nebula-on-premise-linux/nebula-on-premise-linux-index.json"
 	newBinaryPath         = "/home/sormazabal/src/SALTO-client-linux/tmp/nebula-on-premise-linux.zip"
@@ -148,7 +148,7 @@ func main() {
 			if foundDesiredTargetIndexLocally == 0 && err == nil {
 				err := setUpdateStatus(1)
 				if err != nil {
-					generalLog.Printf("❌ Error updating update_status.json:", err)
+					generalLog.Printf("❌ Error updating update_status.json: %v:", err)
 				} else {
 					generalLog.Printf("✅ Successfully set update_status.json to update_available: 1")
 				}

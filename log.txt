@@ -1,0 +1,29 @@
+nebula-on-premise-windows 2025/03/27 15:41:19 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 15:43:20 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 15:43:39 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 15:45:08 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 16:16:29 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 16:25:25 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 16:26:15 general-service.go:106: server errorerrorlisten tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+nebula-on-premise-windows 2025/03/27 16:26:21 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 16:26:21 general-service.go:106: server errorerrorlisten tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+nebula-on-premise-windows 2025/03/27 16:26:34 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 16:26:34 general-service.go:106: server errorerrorlisten tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+nebula-on-premise-windows 2025/03/27 16:28:03 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/27 16:28:03 general-service.go:106: server errorerrorlisten tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+nebula-on-premise-windows 2025/03/28 08:26:37 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 08:26:37 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 08:26:37 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 08:26:38 main.go:47: serve-and-update: open C:\nebula-on-premise-windows\config\nebula-on-premise-linux.yml: The system cannot find the file specified.
+nebula-on-premise-windows 2025/03/28 08:26:37 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 08:26:38 main.go:47: serve-and-update: open C:\nebula-on-premise-windows\config\nebula-on-premise-linux.yml: The system cannot find the file specified.
+nebula-on-premise-windows 2025/03/28 08:26:38 general-service.go:106: server errorerrorlisten tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+nebula-on-premise-windows 2025/03/28 08:46:19 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 09:13:33 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 09:20:02 general-service.go:37: Config parameters before parsing: %!(EXTRA string=httpAddr:, string=, string=internal-httpAddr:, string=, string=debug:, bool=false)
+nebula-on-premise-windows 2025/03/28 09:20:02 general-service.go:106: server errorerrorlisten tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+nebula-on-premise-windows 2025/03/28 09:54:49 general-service.go:35: Config parameters before parsing: httpAddr: , internal-httpAddr: , debug: false
+nebula-on-premise-windows 2025/03/28 09:59:29 general-service.go:35: Config parameters before parsing: httpAddr: , internal-httpAddr: , debug: false
+nebula-on-premise-windows 2025/03/28 09:59:29 general-service.go:56: General server started: httpAddr: :8014, internal-httpAddr: :9004, debug: false
+nebula-on-premise-windows 2025/03/28 09:59:29 server.go:186: 🚀 Server started on :8014
+nebula-on-premise-windows 2025/03/28 09:59:29 main.go:72: listen tcp :8014: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
