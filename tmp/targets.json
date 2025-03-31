@@ -1,0 +1,73 @@
+{
+ "signatures": [
+  {
+   "keyid": "47167821e560e0b9e078f6ce5654683b880232e473daaf9b60b335dbcaf5740a",
+   "sig": "304402206759e8c45315f00c487296ec84950dc4a8972ba9e855f6759ae2032858b54b4402200657751bfffc5f02e30fe3aeb388dcdacf07381706f3db86f2a944e62e3e7073"
+  }
+ ],
+ "signed": {
+  "_type": "targets",
+  "delegations": {
+   "keys": {
+    "47167821e560e0b9e078f6ce5654683b880232e473daaf9b60b335dbcaf5740a": {
+     "keytype": "ecdsa",
+     "keyval": {
+      "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEsOWPsISez0E70CLYo05us03bGS/k\n2BUV0zlbJXUO4t3IEHqtsiON3yApsxY5ydKeY1Za9Bq9uFLi2zlR5GxgCQ==\n-----END PUBLIC KEY-----\n"
+     },
+     "scheme": "ecdsa-sha2-nistp256",
+     "x-tuf-on-ci-keyowner": "@sorayaormazabalmayo"
+    }
+   },
+   "roles": [
+    {
+     "keyids": [
+      "47167821e560e0b9e078f6ce5654683b880232e473daaf9b60b335dbcaf5740a"
+     ],
+     "name": "general-service",
+     "paths": [
+      "general-service/*",
+      "general-service/*/*",
+      "general-service/*/*/*",
+      "general-service/*/*/*/*"
+     ],
+     "terminating": true,
+     "threshold": 1
+    },
+    {
+     "keyids": [
+      "47167821e560e0b9e078f6ce5654683b880232e473daaf9b60b335dbcaf5740a"
+     ],
+     "name": "nebula-on-premise-linux",
+     "paths": [
+      "nebula-on-premise-linux/*",
+      "nebula-on-premise-linux/*/*",
+      "nebula-on-premise-linux/*/*/*",
+      "nebula-on-premise-linux/*/*/*/*"
+     ],
+     "terminating": true,
+     "threshold": 1
+    },
+    {
+     "keyids": [
+      "47167821e560e0b9e078f6ce5654683b880232e473daaf9b60b335dbcaf5740a"
+     ],
+     "name": "nebula-on-premise-windows",
+     "paths": [
+      "nebula-on-premise-windows/*",
+      "nebula-on-premise-windows/*/*",
+      "nebula-on-premise-windows/*/*/*",
+      "nebula-on-premise-windows/*/*/*/*"
+     ],
+     "terminating": true,
+     "threshold": 1
+    }
+   ]
+  },
+  "expires": "2026-03-28T11:40:07Z",
+  "spec_version": "1.0.31",
+  "targets": {},
+  "version": 35,
+  "x-tuf-on-ci-expiry-period": 365,
+  "x-tuf-on-ci-signing-period": 60
+ }
+}

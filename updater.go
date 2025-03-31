@@ -20,8 +20,9 @@ import (
 
 	"github.com/go-logr/stdr"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 
-	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	"github.com/theupdateframework/go-tuf/v2/metadata/config"
 	"github.com/theupdateframework/go-tuf/v2/metadata/updater"
@@ -38,13 +39,12 @@ const (
 var (
 	serviceAccountKeyPath = "C:\\nebula-on-premise-windows\\artifact-downloader-key.json"
 	jsonFilePath          = "C:\\nebula-on-premise-windows\\update_status.json"
-	service               = "nebula-on-premise-linux"
-	targetIndexFile       = "/home/sormazabal/src/SALTO-client-linux/data/nebula-on-premise-linux/nebula-on-premise-linux-index.json"
-	newBinaryPath         = "/home/sormazabal/src/SALTO-client-linux/tmp/nebula-on-premise-linux.zip"
-	destinationPath       = "/home/sormazabal/src/SALTO-client-linux/nebula-on-premise-linux.zip"
-	SALTOLocation         = "/home/sormazabal/src/SALTO-client-linux"
-	linkNameService       = "/usr/local/bin/nebula-on-premise-linux"
-	linkNameConfig        = "/etc/nebula-on-premise-linux/nebula-on-premise-linux.yml"
+	service               = "nebula-on-premise-windows"
+	targetIndexFile       = "C:\\nebula-on-premise-windows\\data\\nebula-on-premise-windows\\nebula-on-premise-windows-index.json"
+	newBinaryPath         = "C:\\nebula-on-premise-windows\\tmp\\nebula-on-premise-linux.zip"
+	destinationPath       = "C:\\nebula-on-premise-windows\\nebula-on-premise-linux.zip"
+	SALTOLocation         = "C:\\nebula-on-premise-windows\\"
+	windowsServiceName    = "Nebula1"
 )
 
 // struct to store update status
@@ -231,32 +231,18 @@ func main() {
 				targetFileService := filepath.Join(SALTOLocation, serviceVersion, "bin", service)
 				targetFileConfig := filepath.Join(SALTOLocation, serviceVersion, "config", "nebula-on-premise-linux.yml")
 
-				// 1) Updating symlink
+				// Updating where the Windows Service Manager should point
 
-				// symlink for service
-				if err := updateSymlink(targetFileService, linkNameService); err != nil {
-					generalLog.Printf("Error updating symlink:", err)
-					return
+				// "C:\nebula-on-premise-windows\nebula-on-premise-windows.exe serve --config=C:\nebula-on-premise-windows\config\nebula-on-premise-windows.yml"
+
+				newExecPath := fmt.Sprintf("%s serve --config=%s", targetFileService, targetFileConfig)
+
+				if err := restartService(windowsServiceName, newExecPath); err != nil {
+					log.Fatalf("Service restart failed: %v", err)
 				}
-				generalLog.Printf("Symlink updated to point to:", targetFileService)
+				log.Println("Service binpath updated and service restarted successfully.")
 
-				// symlink for config
-				if err := updateSymlink(targetFileConfig, linkNameConfig); err != nil {
-					generalLog.Printf("Error updating symlink:", err)
-					return
-				}
-				generalLog.Printf("Symlink updated to point to:", targetFileConfig)
-
-				// 2) Reload and restart the service
-				ctx := context.Background()
-				if err := reloadAndRestartUnit(ctx, "nebula-on-premise-linux.service"); err != nil {
-					generalLog.Printf("Error restarting service:", err)
-					return
-				}
-
-				generalLog.Printf("Service reloaded and restarted successfully!")
-
-				// Delete the previous version's folder
+				// Deleting previous version's folder
 
 				generalLog.Printf("🟣The previous version is %s🟣\n", previousVersion)
 
@@ -425,7 +411,9 @@ func getPreviousVersion(currentVersion string) (string, error) {
 // is not cached, downloads the target file.
 func DownloadTargetIndex(localMetadataDir, service string) ([]byte, int, error) {
 
-	serviceFilePath := filepath.Join(service, fmt.Sprintf("%s-index.json", service))
+	//serviceFilePath := filepath.Join(service, fmt.Sprintf("%s-index.json", service))
+
+	serviceFilePath := fmt.Sprintf("%s/%s-index.json", service, service)
 
 	rootBytes, err := os.ReadFile(filepath.Join(localMetadataDir, "root.json"))
 	if err != nil {
@@ -750,37 +738,119 @@ func Unzip(src, dest string) error {
 	return nil
 }
 
-// It reloads and restarts the unit
-func reloadAndRestartUnit(ctx context.Context, unitName string) error {
-	// Connect to systemd via D-Bus using the context-aware method
-	conn, err := dbus.NewSystemConnectionContext(ctx)
+// startService starts a service
+func startService(serviceName string) error {
+	m, err := mgr.Connect()
 	if err != nil {
-		return fmt.Errorf("failed to connect to system bus: %w", err)
+		return err
 	}
-	defer conn.Close()
+	defer m.Disconnect()
 
-	// Daemon-reload with context
-	if err := conn.ReloadContext(ctx); err != nil {
-		return fmt.Errorf("failed to reload systemd: %w", err)
-	}
-
-	// Restart the unit with context
-	jobID, err := conn.RestartUnitContext(ctx, unitName, "replace", nil)
+	s, err := m.OpenService(serviceName)
 	if err != nil {
-		return fmt.Errorf("failed to restart unit %s: %w", unitName, err)
+		return err
 	}
+	defer s.Close()
 
-	fmt.Printf("Restart job queued: %v\n", jobID)
+	return s.Start()
+}
+
+// stopService stops a service
+func stopService(serviceName string) error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	// Send stop command
+	status, err := s.Control(svc.Stop)
+	if err != nil {
+		return err
+	}
+	log.Printf("Service status: %+v\n", status)
 	return nil
 }
 
-// updateSymlink updates the symlink
-func updateSymlink(newTarget, linkName string) error {
-	if err := os.Remove(linkName); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to remove old symlink: %w", err)
+// deleteService deletes the service
+func deleteService(serviceName string) error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
 	}
-	if err := os.Symlink(newTarget, linkName); err != nil {
-		return fmt.Errorf("failed to create symlink: %w", err)
+	defer m.Disconnect()
+
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		return err
 	}
+	defer s.Close()
+
+	return s.Delete()
+}
+
+// waitForServiceState polls the service status until it reaches the desired state or the timeout expires.
+func waitForServiceState(s *mgr.Service, state svc.State, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		status, err := s.Query()
+		if err != nil {
+			return err
+		}
+		if status.State == state {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timeout waiting for service to reach state %v", state)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// restartService stops the service, updates its binary path, and then starts it.
+func restartService(serviceName, newExePath string) error {
+	// Connect to the Service Manager.
+	m, err := mgr.Connect()
+	if err != nil {
+		return fmt.Errorf("failed to connect to service manager: %v", err)
+	}
+	defer m.Disconnect()
+
+	// Open the service.
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		return fmt.Errorf("could not access service %s: %v", serviceName, err)
+	}
+	defer s.Close()
+
+	// Stop the service.
+	_, err = s.Control(svc.Stop)
+	if err != nil {
+		return fmt.Errorf("failed to send stop control: %v", err)
+	}
+
+	// Wait until the service has stopped.
+	if err := waitForServiceState(s, svc.Stopped, 30*time.Second); err != nil {
+		return fmt.Errorf("service did not stop in time: %v", err)
+	}
+
+	// Update the service configuration with the new binary path.
+	if err := s.UpdateConfig(mgr.Config{
+		BinaryPathName: newExePath,
+	}); err != nil {
+		return fmt.Errorf("failed to update service config: %v", err)
+	}
+
+	// Start the service again.
+	if err := s.Start(); err != nil {
+		return fmt.Errorf("failed to start service: %v", err)
+	}
+
 	return nil
 }
