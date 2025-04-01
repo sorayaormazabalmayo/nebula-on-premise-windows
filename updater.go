@@ -37,14 +37,14 @@ const (
 )
 
 var (
-	serviceAccountKeyPath = "C:\\nebula-on-premise-windows\\artifact-downloader-key.json"
-	jsonFilePath          = "C:\\nebula-on-premise-windows\\update_status.json"
+	serviceAccountKeyPath = "C:\\SALTO-client-windows\\artifact-downloader-key.json"
+	jsonFilePath          = "C:\\SALTO-client-windows\\update_status.json"
 	service               = "nebula-on-premise-windows"
-	targetIndexFile       = "C:\\nebula-on-premise-windows\\data\\nebula-on-premise-windows\\nebula-on-premise-windows-index.json"
-	newBinaryPath         = "C:\\nebula-on-premise-windows\\tmp\\nebula-on-premise-linux.zip"
-	destinationPath       = "C:\\nebula-on-premise-windows\\nebula-on-premise-linux.zip"
-	SALTOLocation         = "C:\\nebula-on-premise-windows\\"
-	windowsServiceName    = "Nebula1"
+	targetIndexFile       = "C:\\SALTO-client-windows\\data\\nebula-on-premise-windows\\nebula-on-premise-windows-index.json"
+	newBinaryPath         = "C:\\SALTO-client-windows\\tmp\\nebula-on-premise-windows"
+	destinationPath       = "C:\\SALTO-client-windows\\nebula-on-premise-windows"
+	SALTOLocation         = "C:\\SALTO-client-windows\\"
+	windowsServiceName    = "nebula-on-premise-windows"
 )
 
 // struct to store update status
@@ -122,7 +122,7 @@ func main() {
 
 	if err != nil {
 		generalLog.Printf("❌There has been an error wile reading the previous version❌\n")
-		generalLog.Printf("err:")
+		generalLog.Printf("err: %v", err)
 	}
 
 	generalLog.Printf("🟣Previous Version is %s🟣\n", previousVersion)
@@ -229,17 +229,16 @@ func main() {
 				unzipAndSetStatus(serviceVersion, generalLog)
 
 				targetFileService := filepath.Join(SALTOLocation, serviceVersion, "bin", service)
-				targetFileConfig := filepath.Join(SALTOLocation, serviceVersion, "config", "nebula-on-premise-linux.yml")
+				targetFileConfig := filepath.Join(SALTOLocation, serviceVersion, "config", "nebula-on-premise-windows.yml")
+				newExecPath := fmt.Sprintf(`%s.exe serve --config=%s`, targetFileService, targetFileConfig)
+				// Remove any quote characters from the command line.
+				cleanExecPath := strings.ReplaceAll(newExecPath, "\"", "")
+				generalLog.Printf("\n\n🌹🌹🌹The new exec path is as follows:🌹🌹🌹🌹 %s\n\n", cleanExecPath)
 
-				// Updating where the Windows Service Manager should point
-
-				// "C:\nebula-on-premise-windows\nebula-on-premise-windows.exe serve --config=C:\nebula-on-premise-windows\config\nebula-on-premise-windows.yml"
-
-				newExecPath := fmt.Sprintf("%s serve --config=%s", targetFileService, targetFileConfig)
-
-				if err := recreateService(windowsServiceName, newExecPath); err != nil {
+				if err := recreateService(windowsServiceName, cleanExecPath); err != nil {
 					log.Fatalf("Service restart failed: %v", err)
 				}
+
 				log.Println("Service binpath updated and service restarted successfully.")
 
 				// Deleting previous version's folder
@@ -755,46 +754,6 @@ func startService(serviceName string) error {
 	return s.Start()
 }
 
-// stopService stops a service
-func stopService(serviceName string) error {
-	m, err := mgr.Connect()
-	if err != nil {
-		return err
-	}
-	defer m.Disconnect()
-
-	s, err := m.OpenService(serviceName)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	// Send stop command
-	status, err := s.Control(svc.Stop)
-	if err != nil {
-		return err
-	}
-	log.Printf("Service status: %+v\n", status)
-	return nil
-}
-
-// deleteService deletes the service
-func deleteService(serviceName string) error {
-	m, err := mgr.Connect()
-	if err != nil {
-		return err
-	}
-	defer m.Disconnect()
-
-	s, err := m.OpenService(serviceName)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	return s.Delete()
-}
-
 // waitForServiceState polls the service status until it reaches the desired state or the timeout expires.
 func waitForServiceState(s *mgr.Service, state svc.State, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
@@ -825,34 +784,37 @@ func recreateService(serviceName, newExePath string) error {
 	// Try opening the service to see if it exists.
 	s, err := m.OpenService(serviceName)
 	if err == nil {
-		// If the service exists, stop it (ignoring errors if it's not running).
-		_, _ = s.Control(svc.Stop)
-		// Optionally, wait for the service to stop.
-		_ = waitForServiceState(s, svc.Stopped, 30*time.Second)
+		// If the service exists, stop it (discarding the returned status).
+		_, err = s.Control(svc.Stop)
+		if err != nil {
+			log.Printf("Warning: failed to stop service %s: %v", serviceName, err)
+		}
+		// Optionally, wait until the service stops.
+		if err := waitForServiceState(s, svc.Stopped, 30*time.Second); err != nil {
+			log.Printf("Warning: service %s did not stop in time: %v", serviceName, err)
+		}
 
 		// Delete the service.
 		if err := s.Delete(); err != nil {
 			s.Close()
 			return fmt.Errorf("failed to delete service %s: %v", serviceName, err)
 		}
+
 		s.Close()
+
 	} else {
-		// If the service doesn't exist, that's fine. We can create a new one.
 		log.Printf("Service %s does not exist, will create a new one", serviceName)
 	}
 
-	// Create a new service with the desired binary path (including command-line arguments).
-	s, err = m.CreateService(serviceName, newExePath, mgr.Config{
-		DisplayName: serviceName,
-		StartType:   mgr.StartAutomatic,
-	})
+	// Create a new service with the desired binary path (without extra quotes).
+	desc := "Service version X"
+
+	fmt.Printf("Printing another time the ExePath: %s\n", newExePath)
+	s, err = m.CreateService(serviceName, newExePath, mgr.Config{DisplayName: desc}, "start", "=", " auto")
 	if err != nil {
 		return fmt.Errorf("failed to create service: %v", err)
 	}
 	defer s.Close()
-
-	// Optionally, set a service description.
-	// _ = s.SetDescription("Your service description here")
 
 	// Start the newly created service.
 	if err := s.Start(); err != nil {
