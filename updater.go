@@ -237,7 +237,7 @@ func main() {
 
 				newExecPath := fmt.Sprintf("%s serve --config=%s", targetFileService, targetFileConfig)
 
-				if err := restartService(windowsServiceName, newExecPath); err != nil {
+				if err := recreateService(windowsServiceName, newExecPath); err != nil {
 					log.Fatalf("Service restart failed: %v", err)
 				}
 				log.Println("Service binpath updated and service restarted successfully.")
@@ -813,8 +813,8 @@ func waitForServiceState(s *mgr.Service, state svc.State, timeout time.Duration)
 	}
 }
 
-// restartService stops the service, updates its binary path, and then starts it.
-func restartService(serviceName, newExePath string) error {
+// recreateService deletes the existing service (if any) and creates a new one with the specified binary path.
+func recreateService(serviceName, newExePath string) error {
 	// Connect to the Service Manager.
 	m, err := mgr.Connect()
 	if err != nil {
@@ -822,32 +822,39 @@ func restartService(serviceName, newExePath string) error {
 	}
 	defer m.Disconnect()
 
-	// Open the service.
+	// Try opening the service to see if it exists.
 	s, err := m.OpenService(serviceName)
+	if err == nil {
+		// If the service exists, stop it (ignoring errors if it's not running).
+		_, _ = s.Control(svc.Stop)
+		// Optionally, wait for the service to stop.
+		_ = waitForServiceState(s, svc.Stopped, 30*time.Second)
+
+		// Delete the service.
+		if err := s.Delete(); err != nil {
+			s.Close()
+			return fmt.Errorf("failed to delete service %s: %v", serviceName, err)
+		}
+		s.Close()
+	} else {
+		// If the service doesn't exist, that's fine. We can create a new one.
+		log.Printf("Service %s does not exist, will create a new one", serviceName)
+	}
+
+	// Create a new service with the desired binary path (including command-line arguments).
+	s, err = m.CreateService(serviceName, newExePath, mgr.Config{
+		DisplayName: serviceName,
+		StartType:   mgr.StartAutomatic,
+	})
 	if err != nil {
-		return fmt.Errorf("could not access service %s: %v", serviceName, err)
+		return fmt.Errorf("failed to create service: %v", err)
 	}
 	defer s.Close()
 
-	// Stop the service.
-	_, err = s.Control(svc.Stop)
-	if err != nil {
-		return fmt.Errorf("failed to send stop control: %v", err)
-	}
+	// Optionally, set a service description.
+	// _ = s.SetDescription("Your service description here")
 
-	// Wait until the service has stopped.
-	if err := waitForServiceState(s, svc.Stopped, 30*time.Second); err != nil {
-		return fmt.Errorf("service did not stop in time: %v", err)
-	}
-
-	// Update the service configuration with the new binary path.
-	if err := s.UpdateConfig(mgr.Config{
-		BinaryPathName: newExePath,
-	}); err != nil {
-		return fmt.Errorf("failed to update service config: %v", err)
-	}
-
-	// Start the service again.
+	// Start the newly created service.
 	if err := s.Start(); err != nil {
 		return fmt.Errorf("failed to start service: %v", err)
 	}

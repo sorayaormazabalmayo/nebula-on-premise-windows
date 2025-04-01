@@ -42,41 +42,42 @@ func (m *myService) Execute(args []string, r <-chan svc.ChangeRequest, status ch
 
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 
-	f, err := os.OpenFile("C:\\nebula-on-premise-windows\\log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("C:\\SALTO-client-windows\\log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
 
-	// Create new logger
 	logger := log.New(f, "nebula-on-premise-windows ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	log.Printf("Version 1 of the nebula-on-premise.exe")
 
-	// Create command
-	generalServiceCmd := cli.NewGeneralServiceCommand(logger)
-
-	// Control aspects of parsing behaviour
-	opts := []ff.Option{
-		ff.WithConfigFileFlag("config"),
-		ff.WithConfigFileParser(ffyaml.Parse),
-	}
-
-	// Run CLI command
-	if err := generalServiceCmd.ParseAndRun(context.Background(), os.Args[1:], opts...); err != nil {
-		if errors.Is(err, ff.ErrHelp) || errors.Is(err, ff.ErrDuplicateFlag) || errors.Is(err, ff.ErrAlreadyParsed) || errors.Is(err, ff.ErrUnknownFlag) || errors.Is(err, ff.ErrNotParsed) {
-			fmt.Fprintf(os.Stderr, "\n%s\n", ffhelp.Command(&generalServiceCmd))
-		}
-
-		if !errors.Is(err, ff.ErrHelp) {
-			logger.Fatal(err)
-		}
-		os.Exit(1)
-	}
-
+	// Inform SCM the service is starting
 	status <- svc.Status{State: svc.StartPending}
 
+	// Inform SCM the service is now running and accepts commands BEFORE blocking operations
 	status <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+
+	// Run your long-running operation in the background
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		generalServiceCmd := cli.NewGeneralServiceCommand(logger)
+		opts := []ff.Option{
+			ff.WithConfigFileFlag("config"),
+			ff.WithConfigFileParser(ffyaml.Parse),
+		}
+
+		if err := generalServiceCmd.ParseAndRun(ctx, os.Args[1:], opts...); err != nil {
+			if errors.Is(err, ff.ErrHelp) || errors.Is(err, ff.ErrDuplicateFlag) || errors.Is(err, ff.ErrAlreadyParsed) || errors.Is(err, ff.ErrUnknownFlag) || errors.Is(err, ff.ErrNotParsed) {
+				fmt.Fprintf(os.Stderr, "\n%s\n", ffhelp.Command(&generalServiceCmd))
+			}
+
+			if !errors.Is(err, ff.ErrHelp) {
+				logger.Fatal(err)
+			}
+			os.Exit(1)
+		}
+	}()
 
 loop:
 	for {
@@ -86,18 +87,23 @@ loop:
 			case svc.Interrogate:
 				status <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
-				log.Print("Shutting service...!")
+				logger.Println("Shutting down service...")
 				break loop
 			case svc.Pause:
 				status <- svc.Status{State: svc.Paused, Accepts: cmdsAccepted}
 			case svc.Continue:
 				status <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 			default:
-				log.Printf("Unexpected service control request #%d", c)
+				logger.Printf("Unexpected service control request #%d", c.Cmd)
 			}
 		}
 	}
 
+	// Signal cancellation to gracefully stop background tasks
+	cancel()
+
 	status <- svc.Status{State: svc.StopPending}
-	return false, 1
+
+	// Return stopped status
+	return false, 0
 }

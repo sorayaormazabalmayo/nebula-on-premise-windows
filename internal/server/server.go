@@ -29,7 +29,7 @@ type UpdateStatus struct {
 }
 
 var (
-	jsonFilePath = "C:\\nebula-on-premise-windows\\update_status.json"
+	jsonFilePath = "C:\\SALTO-client-windows\\update_status.json"
 	updateStatus UpdateStatus
 	updateMutex  sync.Mutex
 )
