@@ -110,7 +110,7 @@ jobs:
       # Step 3: Getting the .zip that wants to be relased 
       - name: Getting the -zip 
         run: |
-         zip -r nebula-on-premise-windows.zip bin/nebula-on-premise-windows config/
+         zip -r nebula-on-premise-windows.zip bin/nebula-on-premise-windows.exe config/
               
       # Step 4: Compute the SHA256
       - name: Compute the SHA256 of the .zip
