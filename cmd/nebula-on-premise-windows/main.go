@@ -42,7 +42,7 @@ func (m *myService) Execute(args []string, r <-chan svc.ChangeRequest, status ch
 
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 
-	f, err := os.OpenFile("C:\\SALTO-client-windows\\log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("C:\\log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
